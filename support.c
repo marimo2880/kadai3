@@ -112,7 +112,7 @@ void input(int argc, char *argv[])
 	}
     }
     
-    /* $B=i4|2=(B */
+    /* 初期化 */
     total_cost = 0;
     for (i = 0; i < total_pe; i++) {
 	for (j = 0; j < gnt_size; j++) {
