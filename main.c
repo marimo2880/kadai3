@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "support.h"
 
 
@@ -13,7 +14,11 @@ int get_exit_task()
 void get_cp()
 {
     int i, j;
+    //allocate cp
     int *cp = malloc(total_task * sizeof(int));
+    //initialize cp
+    memset(cp,0,total_task * sizeof(int));
+
     for (i = get_exit_task(); i > 0; i--)
     {
         if (i == get_exit_task())
@@ -38,7 +43,6 @@ int main(int argc, char *argv[])
 
     get_exit_task();
     get_cp();
-
 
     /*scheduling end*/
 
