@@ -97,9 +97,35 @@ void initialize_tasks(void)
         if(pre_total_cost(t) == 0)
         {
             pe[processor_index].task_no[0] = priority_list[task_index].number;
+            pe[processor_index].task_cost[0] = t.cost;
             processor_index++;
         }
     }
+}
+
+int decide_processor(int* pe_current_cost)
+{
+    int min_cost = pe_current_cost[0];
+    int min_cost_processor_no = 0;
+    for (int processor_index = 1; processor_index < total_pe; processor_index++)
+    {
+        if(min_cost > pe_current_cost[processor_index])
+        {
+            min_cost = pe_current_cost[processor_index];
+            min_cost_processor_no = processor_index;
+        }   
+    }
+    return min_cost_processor_no;
+}
+
+void allocate_tasks(void)
+{
+     int processor_index;
+     int* pe_current_cost = malloc(total_pe * sizeof(int));
+     for(processor_index = 0; processor_index < total_pe; processor_index++)
+     {
+        pe_current_cost[processor_index] = pe[processor_index].task_cost[0];
+     }
 }
 
 int main(int argc, char* argv[])
