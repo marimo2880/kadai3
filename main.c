@@ -35,7 +35,8 @@ int* get_critical_path(void)
                 cp[task[i].pre[j]] = task[task[i].pre[j]].cost + cp[i];
         }
     }
-    //for (i = 0; i < 10; i++) printf("cp[%d]=%d\n", i, cp[i]);
+    //for (i = 0; i < 10; i++) 
+    //    printf("cp[%d]=%d\n", i, cp[i]);
     return cp;
 }
 
@@ -54,7 +55,7 @@ int compare_cp_info(const void* p_a, const void* p_b)
         return 1;
 }
 
-void get_priority_list(void)
+cp_info* get_priority_list(void)
 {
     int i;
     int* cp = get_critical_path();
@@ -66,12 +67,40 @@ void get_priority_list(void)
     }
     qsort(priority_list, total_task, sizeof(cp_info), &compare_cp_info);
 
-    for (i = 0; i < total_task; i++)
-    {
-        printf("%d:%d\n", priority_list[i].number, priority_list[i].cost );
-    }
+    //for (i = 0; i < total_task; i++)
+    //{
+    //    printf("%d:%d\n", priority_list[i].number, priority_list[i].cost );
+    //}
+    return priority_list;
 }
 
+int pre_total_cost(struct _task t)
+{
+    int i;
+    int pre_cost = 0;
+    for(i = 0; i < t.total_pre; i++)
+    {
+        pre_cost += task[t.pre[i]].cost;
+    }
+    return pre_cost;
+}
+
+void initialize_tasks(void)
+{
+    cp_info* priority_list = get_priority_list();
+    int task_index;
+    int processor_index = 0;
+    for(task_index = 1; task_index < total_task && processor_index != total_pe; task_index++)
+    {
+        //struct _task == type
+        struct _task t = task[priority_list[task_index].number];
+        if(pre_total_cost(t) == 0)
+        {
+            pe[processor_index].task_no[0] = priority_list[task_index].number;
+            processor_index++;
+        }
+    }
+}
 
 int main(int argc, char* argv[])
 {
@@ -80,7 +109,6 @@ int main(int argc, char* argv[])
 
     /*scheduling start*/
 
-    get_priority_list();
 
     /*scheduling end*/
 
