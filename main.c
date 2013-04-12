@@ -127,7 +127,7 @@ int* update_pe_current_cost(int decide_processor())
     {
         pe_current_cost[processor_index] = pe[processor_index].task_cost[0];
     }
-    pe_current_cost[decide_processor()] += task[decide_task()].cost;
+    pe_current_cost[decide_processor()] += task[decide_task(int task_is_done)].cost;
     return pe_current_cost;
 }
 
@@ -173,8 +173,8 @@ int decide_task(int* task_is_done)
 
 void allocate_tasks(void)
 {
-
-
+    pe[decide_processor()].task_no[] = 
+    pe[decide_processor()].task_cost[] = 
 }
 
 int main(int argc, char* argv[])
