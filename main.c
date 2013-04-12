@@ -92,7 +92,7 @@ void initialize_tasks(void)
     int processor_index = 0;
     for(task_index = 1; task_index < total_task && processor_index != total_pe; task_index++)
     {
-        //struct _task == type
+        //struct _task : type
         struct _task t = task[priority_list[task_index].number];
         if(pre_total_cost(t) == 0)
         {
@@ -113,19 +113,68 @@ int decide_processor(int* pe_current_cost)
         {
             min_cost = pe_current_cost[processor_index];
             min_cost_processor_no = processor_index;
-        }   
+        }
     }
     return min_cost_processor_no;
 }
 
+int* update_pe_current_cost(int decide_processor())
+{
+    int processor_index;
+    int* pe_current_cost = malloc(total_pe * sizeof(int));
+    //initialize pe_current_cost
+    for(processor_index = 0; processor_index < total_pe; processor_index++)
+    {
+        pe_current_cost[processor_index] = pe[processor_index].task_cost[0];
+    }
+    pe_current_cost[decide_processor()] += task[decide_task()].cost;
+    return pe_current_cost;
+}
+
+void initialize_task_is_done(void)
+{
+    int i;
+    int* task_is_done = malloc(total_task * sizeof(int));
+    for(i = 0; i < total_task; i++)
+    {
+        if(i == 0)
+            task_is_done[i] = 1;
+        else
+            memset(task_is_done, 0, total_task-1 * sizeof(int));
+    }
+}
+
+int decide_task(int* task_is_done)
+{
+    int i,j;
+    int k = 0;
+    int done_tasks = 0;
+    int* next_allocated_task_no = malloc(total_task * sizeof(int));
+
+    cp_info* priority_list = get_priority_list();
+    for(i = 0; i < total_task; i++)
+    {
+        if(task_is_done[priority_list[i].number] == 0)
+        {
+            for(j = 0; j < task[priority_list[i].number].total_pre; j++)
+            {
+                done_tasks *= task_is_done[priority_list[i].number];
+                if(done_tasks == 1)
+                {
+                    next_allocated_task_no[k] = priority_list[i].number;
+                    k++;
+                }  
+            }
+        }
+    }
+    task_is_done[next_allocated_task_no[0]] = 1;
+    return next_allocated_task_no[0];
+}
+
 void allocate_tasks(void)
 {
-     int processor_index;
-     int* pe_current_cost = malloc(total_pe * sizeof(int));
-     for(processor_index = 0; processor_index < total_pe; processor_index++)
-     {
-        pe_current_cost[processor_index] = pe[processor_index].task_cost[0];
-     }
+
+
 }
 
 int main(int argc, char* argv[])
