@@ -209,13 +209,12 @@ int decide_task(int* task_is_done)
 int get_total_cost(int* pe_current_cost)
 {
     int i;
-    int max_cost = pe_current_cost[0];
-    for(i = 1; i < total_pe; i++)
+    for(i = 0; i < total_pe; i++)
     {
-        if(max_cost < pe_current_cost[i])
-            max_cost = pe_current_cost[i];
+        if(total_cost < pe_current_cost[i])
+            total_cost = pe_current_cost[i];
     }
-    return max_cost;
+    return total_cost;
 }
 
 void allocate_tasks(void)
@@ -277,10 +276,12 @@ void allocate_tasks(void)
         //check
         printf("pe_allocated_task_no = %d\n",pe_allocated_task_no);
         if(all_task_is_done == 1)
+        {
             get_total_cost(pe_current_cost);
             printf("total_cost = %d\n",get_total_cost(pe_current_cost));
             break;
-    
+        }
+    }
 }
 
 int main(int argc, char* argv[])
