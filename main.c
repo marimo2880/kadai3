@@ -13,6 +13,7 @@ typedef struct cp_info cp_info;
 
 int* pe_current_cost;
 int* task_is_done;
+cp_info* priority_list;
 int pe_allocated_task_no;
 int min_cost;
 
@@ -165,13 +166,13 @@ int decide_processor(int* pe_current_cost)
     return min_cost_processor_no;
 }
 
-int decide_task(int* task_is_done)
+int decide_task(int* task_is_done,cp_info* priority_list)
 {
     int i, j,k;
     int done_tasks;
     int next_allocated_task_no;
 
-    cp_info* priority_list = get_priority_list();
+    //cp_info* priority_list = get_priority_list();
 
     for (i = 1; i < total_task; i++)
     {
@@ -233,7 +234,7 @@ void allocate_tasks(void)
     while (1)
     {
         int d_p = decide_processor(pe_current_cost);
-        int d_t = decide_task(task_is_done);
+        int d_t = decide_task(task_is_done,priority_list);
         //check
         printf("d_p = %d\n",d_p);
         printf("d_t = %d\n",d_t);
