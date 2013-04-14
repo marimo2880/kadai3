@@ -191,7 +191,7 @@ int decide_task(int* task_is_done)
                 done_tasks = 1;
                 done_tasks *= task_is_done[task[priority_list[i].number].pre[j]];
                 //check
-                printf("done_tasks = %d\n",done_tasks);
+                //printf("done_tasks = %d\n",done_tasks);
                 if (done_tasks == 1)
                 {
                     next_allocated_task_no = priority_list[i].number;
@@ -248,9 +248,12 @@ void allocate_tasks(void)
             pe[d_p].task_no[pe_allocated_task_no] = task[d_t].no;
             pe[d_p].task_cost[pe_allocated_task_no] = task[d_t].cost;
             pe_current_cost[d_p] += task[d_t].cost;
-            //check
-            printf("pe[d_p].task_no[pe_allocated_task_no] = %d\n",task[d_t].no);
         }
+
+        //check
+        printf("pe[%d].task_no[%d] = %d\n",d_p,pe_allocated_task_no,task[d_t].no);
+        printf("pe[%d].task_cost[%d] = %d\n",d_p,pe_allocated_task_no,task[d_t].cost);
+
         pe_allocated_task_no++;
 
         for(i = 0; i < total_task; i++)
