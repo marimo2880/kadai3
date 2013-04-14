@@ -11,9 +11,6 @@ struct cp_info
 
 typedef struct cp_info cp_info;
 
-int* pe_current_cost;
-int* task_is_done;
-cp_info* priority_list;
 int pe_allocated_task_no;
 int min_cost;
 
@@ -91,9 +88,8 @@ int pre_total_cost(struct _task t)
     return pre_cost;
 }
 
-void initialize_tasks(void)
+void initialize_tasks(const cp_info* priority_list, int* task_is_done)
 {
-    cp_info* priority_list = get_priority_list();
     int task_index;
     int processor_index = 0;
     for (task_index = 1; task_index < total_task && processor_index < total_pe; task_index++)
@@ -115,35 +111,28 @@ void initialize_tasks(void)
     }
 }
 
-void initialize_task_is_done(void)
+int* initialize_task_is_done(void)
 {
-    int i;
-    task_is_done = malloc(total_task * sizeof(int));
-    for (i = 0; i < total_task; i++)
-    {
-        if (i == 0)
-            task_is_done[i] = 1;
-        else
-            task_is_done[i] = 0;
-        //check
-        //printf("%d : %d\n",i,task_is_done[i]);
-    }
+    int* task_is_done = malloc(total_task * sizeof(int));
+    memset(task_is_done, 0, total_task * sizeof(int));
+    task_is_done[0] = 1;
+    return task_is_done;
 }
 
-void initialize_pe_current_cost(void)
+int* initialize_pe_current_cost(void)
 {
-    initialize_tasks();
     int processor_index;
-    pe_current_cost = malloc(total_pe * sizeof(int));
+    int* pe_current_cost = malloc(total_pe * sizeof(int));
     for(processor_index = 0; processor_index < total_pe; processor_index++)
     {
         pe_current_cost[processor_index] = pe[processor_index].task_cost[0];
         //check
         //printf("%d : %d\n",processor_index,pe_current_cost[processor_index]);
     }
+    return pe_current_cost;
 }
 
-int decide_processor(int* pe_current_cost)
+int decide_processor(int* pe_current_cost, int* task_is_done)
 {
     min_cost = pe_current_cost[0];
     int min_cost_processor_no = 0;
@@ -166,7 +155,7 @@ int decide_processor(int* pe_current_cost)
     return min_cost_processor_no;
 }
 
-int decide_task(int* task_is_done,cp_info* priority_list)
+int decide_task(int* task_is_done, const cp_info* priority_list)
 {
     int i, j,k;
     int done_tasks;
@@ -177,8 +166,7 @@ int decide_task(int* task_is_done,cp_info* priority_list)
     for (i = 1; i < total_task; i++)
     {
         printf("--------------\n");
-        initialize_task_is_done();
-        
+
         //check
         for(k = 0;k < total_task; k++)
             printf("task_is_done = %d\n",task_is_done[k]);
@@ -220,9 +208,10 @@ int get_total_cost(int* pe_current_cost)
 
 void allocate_tasks(void)
 {
-    initialize_task_is_done();
-    initialize_pe_current_cost();
-    
+    int* task_is_done = initialize_task_is_done();
+    int* pe_current_cost = initialize_pe_current_cost();
+    const cp_info* priority_list = get_priority_list();
+
     int i;
     int previous_min_cost = 0;
     int now_min_cost;
@@ -233,7 +222,7 @@ void allocate_tasks(void)
 
     while (1)
     {
-        int d_p = decide_processor(pe_current_cost);
+        int d_p = decide_processor(pe_current_cost, task_is_done);
         int d_t = decide_task(task_is_done,priority_list);
         //check
         printf("d_p = %d\n",d_p);
@@ -269,9 +258,9 @@ void allocate_tasks(void)
 
         pe_allocated_task_no++;
 
+        all_task_is_done = 1;
         for(i = 0; i < total_task; i++)
         {
-            all_task_is_done = 1;
             all_task_is_done *= task_is_done[i];
         }
         //check
