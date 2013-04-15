@@ -184,7 +184,7 @@ int get_total_cost(const processor_info* processors_info)
     return max_cost;
 }
 
-void fix_idle_cost(int processor_index, processor_info* processors_info, int current_cost)
+void fix_idle_cost(processor_info* processors_info, int current_cost)
 {
     int i;
     for(i = 0; i < total_pe; i++)
@@ -197,7 +197,7 @@ void fix_idle_cost(int processor_index, processor_info* processors_info, int cur
             {
                 int idle_cost = current_cost - processors_info[i].current_cost;
                 processors_info[i].current_cost += idle_cost;
-                pe[i].task_cost[last_task_index] = idle_cost;
+                pe[i].task_cost[last_task_index] += idle_cost;
             }
         }
     }
@@ -289,7 +289,7 @@ void allocate_tasks(void)
         {
             if(task_index == -1)
                 current_cost = get_last_working_processor_cost(processors_info);
-            fix_idle_cost(processor_index, processors_info, current_cost);
+            fix_idle_cost(processors_info, current_cost);
             update_tasks_status(current_cost, tasks_status, processors_info);
         }
     }
