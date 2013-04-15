@@ -3,6 +3,15 @@
 #include <string.h>
 #include "support.h"
 
+
+enum task_status {
+    DONE,
+    PROCESSING,
+    TODO
+};
+
+typedef enum task_status task_status;
+
 struct cp_info
 {
     int cost;
@@ -82,7 +91,7 @@ int pre_total_cost(struct _task t)
     return pre_cost;
 }
 
-void initialize_tasks(const cp_info* priority_list, int* task_is_done)
+void initialize_tasks(const cp_info* priority_list, task_status* tasks_status)
 {
     int task_index;
     int processor_index = 0;
@@ -93,18 +102,20 @@ void initialize_tasks(const cp_info* priority_list, int* task_is_done)
         {
             pe[processor_index].task_no[0] = priority_list[task_index].number;
             pe[processor_index].task_cost[0] = t.cost;
-            task_is_done[priority_list[task_index].number] = 1;
+            tasks_status[priority_list[task_index].number] = DONE;
             processor_index++;
         }
     }
 }
 
-int* initialize_task_is_done(void)
+task_status* initialize_tasks_status(void)
 {
-    int* task_is_done = malloc(total_task * sizeof(int));
-    memset(task_is_done, 0, total_task * sizeof(int));
-    task_is_done[0] = 1;
-    return task_is_done;
+    int i;
+    task_status* tasks_status = malloc(total_task * sizeof(task_status));
+    tasks_status[0] = DONE;
+    for(i = 1; i < total_task; i++)
+        tasks_status[i] = TODO;
+    return tasks_status;
 }
 
 processor_info* initialize_processors_info(void)
@@ -115,19 +126,25 @@ processor_info* initialize_processors_info(void)
     {
         info[i].processor = pe[i];
         info[i].current_cost = pe[i].task_cost[0];
-        info[i].current_task = pe[i].task_no[0];
+        if(pe[i].task_cost[0] == 0)
+            info[i].current_task = 0;
+        else
+            info[i].current_task = 1;
     }
     return info;
 }
 
-int decide_processor(const int* task_is_done, const processor_info* processors_info)
+int decide_processor(const processor_info* processors_info)
 {
-    int min_cost = processors_info[0].current_cost;
+    int min_cost = -1;
     int min_cost_processor_no = 0;
     int i;
-    for (i = 1; i < total_pe; i++)
+    for (i = 0; i < total_pe; i++)
     {
-        if (min_cost > processors_info[i].current_cost)
+        int current_task = processors_info[i].current_task - 1;
+        if(current_task >= 0 && pe[i].task_no[current_task] == -1)
+            continue;
+        if (min_cost == -1 || min_cost > processors_info[i].current_cost)
         {
             min_cost = processors_info[i].current_cost;
             min_cost_processor_no = i;
@@ -136,22 +153,22 @@ int decide_processor(const int* task_is_done, const processor_info* processors_i
     return min_cost_processor_no;
 }
 
-int is_dependency_done(struct _task task_info, const int* task_is_done)
+int is_dependency_done(struct _task task_info, const task_status* tasks_status)
 {
     int i;
     for (i = 0; i < task_info.total_pre; i++)
-        if (!task_is_done[task_info.pre[i]])
+        if (tasks_status[task_info.pre[i]] != DONE)
             return 0;
     return 1;
 }
 
-int decide_task(const int* task_is_done, const cp_info* priority_list)
+int decide_task(const task_status* tasks_status, const cp_info* priority_list)
 {
     int i;
     for (i = 0; i < total_task; i++)
     {
         int task_index = priority_list[i].number;
-        if (!task_is_done[task_index] && is_dependency_done(task[task_index], task_is_done))
+        if (tasks_status[task_index] == TODO && is_dependency_done(task[task_index], tasks_status))
             return task_index;
     }
     return -1;
@@ -167,24 +184,27 @@ int get_total_cost(const processor_info* processors_info)
     return max_cost;
 }
 
-void fix_idle_cost(int processor_index,processor_info* processors_info,int current_cost)
+void fix_idle_cost(int processor_index, processor_info* processors_info, int current_cost)
 {
     int i;
     for(i = 0; i < total_pe; i++)
     {
         int last_task_index = processors_info[i].current_task - 1;
-        int last_task_no = pe[i].task_no[last_task_index];
-        if(last_task_no == -1)
+        if(last_task_index >= 0)
         {
-            int idle_cost = current_cost - processors_info[i].current_cost;
-            processors_info[i].current_cost += idle_cost;
-            pe[i].task_cost[last_task_index] = idle_cost;
+            int last_task_no = pe[i].task_no[last_task_index];
+            if(last_task_no == -1)
+            {
+                int idle_cost = current_cost - processors_info[i].current_cost;
+                processors_info[i].current_cost += idle_cost;
+                pe[i].task_cost[last_task_index] = idle_cost;
+            }
         }
     }
-}  
+}
 
 
-int update_info(int task_index, int processor_index, int* task_is_done, processor_info* processors_info)
+int update_info(int task_index, int processor_index, task_status* tasks_status, processor_info* processors_info)
 {
     int processor_current_task = processors_info[processor_index].current_task++;
     if (task_index == -1)
@@ -193,7 +213,7 @@ int update_info(int task_index, int processor_index, int* task_is_done, processo
     }
     else
     {
-        task_is_done[task_index] = 1;
+        tasks_status[task_index] = PROCESSING;
         pe[processor_index].task_cost[processor_current_task] = task[task_index].cost;
         pe[processor_index].task_no[processor_current_task] = task[task_index].no;
         processors_info[processor_index].current_cost += task[task_index].cost;
@@ -201,32 +221,81 @@ int update_info(int task_index, int processor_index, int* task_is_done, processo
     return processors_info[processor_index].current_cost;
 }
 
-int all_task_done(const int* task_is_done)
+int count_working_processors(const processor_info* processors_info)
+{
+    int i;
+    int total_working_processors = 0;
+    for(i = 0; i < total_pe; i++)
+    {
+        int last_task = processors_info[i].current_task - 1;
+        if(last_task >= 0 && pe[i].task_no[last_task] != -1)
+            total_working_processors++;
+    }
+    return total_working_processors;
+}
+
+void update_tasks_status(int current_cost, task_status* tasks_status, const processor_info* processors_info)
+{
+    int i;
+    for(i = 0; i < total_pe; i++)
+    {
+        if(processors_info[i].current_cost < current_cost || count_working_processors(processors_info) == 1)
+        {
+            int last_task_index = processors_info[i].current_task - 1;
+            if(last_task_index >= 0)
+            {
+                int last_task_no = pe[i].task_no[last_task_index];
+                tasks_status[last_task_no] = DONE;
+            }
+        }
+    }
+}
+
+int all_task_done(const task_status* tasks_status)
 {
     int i;
     for (i = 0; i < total_task; i++)
-        if (!task_is_done[i])
+        if(tasks_status[i] != DONE)
             return 0;
     return 1;
 }
 
+
+int get_last_working_processor_cost(const processor_info* processors_info)
+{
+    int i;
+    for(i = 0; i < total_pe; i++)
+    {
+        int last_task = processors_info[i].current_task - 1;
+        if(last_task >= 0 && pe[i].task_no[last_task] != -1)
+            return processors_info[i].current_cost;
+    }
+    return 0;
+}
+
 void allocate_tasks(void)
 {
-    int* task_is_done = initialize_task_is_done();
-    processor_info* processors_info = initialize_processors_info();
+    task_status* tasks_status = initialize_tasks_status();
     const cp_info* priority_list = get_priority_list();
+    initialize_tasks(priority_list, tasks_status);
+    processor_info* processors_info = initialize_processors_info();
 
-    while (!all_task_done(task_is_done))
+    while (!all_task_done(tasks_status))
     {
-        int processor_index = decide_processor(task_is_done, processors_info);
-        int task_index = decide_task(task_is_done, priority_list);
-        int current_cost = update_info(task_index, processor_index, task_is_done, processors_info);
-        if(task_index != -1)
-            fix_idle_cost(processor_index,processors_info,current_cost);
+        int processor_index = decide_processor(processors_info);
+        int task_index = decide_task(tasks_status, priority_list);
+        int current_cost = update_info(task_index, processor_index, tasks_status, processors_info);
+        if(task_index != -1 || count_working_processors(processors_info) == 1)
+        {
+            if(task_index == -1)
+                current_cost = get_last_working_processor_cost(processors_info);
+            fix_idle_cost(processor_index, processors_info, current_cost);
+            update_tasks_status(current_cost, tasks_status, processors_info);
+        }
     }
     total_cost = get_total_cost(processors_info);
 
-    free(task_is_done);
+    free(tasks_status);
     free((cp_info*)priority_list);
     free(processors_info);
 }
