@@ -9,7 +9,8 @@ struct cp_info
     int number;
 };
 
-struct processor_info {
+struct processor_info
+{
     struct _pe processor;
     int current_task;
     int current_cost;
@@ -32,11 +33,11 @@ int* get_critical_path(void)
     memset(cp, 0, total_task * sizeof(int));
     cp[get_exit_task()] = task[get_exit_task()].cost;
 
-    for(i = get_exit_task(); i > 0; i--)
+    for (i = get_exit_task(); i > 0; i--)
     {
-        for(j = 0; j < task[i].total_pre; j++)
+        for (j = 0; j < task[i].total_pre; j++)
         {
-            if(cp[task[i].pre[j]] < task[task[i].pre[j]].cost + cp[i])
+            if (cp[task[i].pre[j]] < task[task[i].pre[j]].cost + cp[i])
                 cp[task[i].pre[j]] = task[task[i].pre[j]].cost + cp[i];
         }
     }
@@ -61,7 +62,7 @@ cp_info* get_priority_list(void)
     int i;
     int* cp = get_critical_path();
     cp_info* priority_list = malloc(total_task * sizeof(cp_info));
-    for(i = 0; i < total_task; i++)
+    for (i = 0; i < total_task; i++)
     {
         priority_list[i].cost = cp[i];
         priority_list[i].number = i;
@@ -76,7 +77,7 @@ int pre_total_cost(struct _task t)
 {
     int i;
     int pre_cost = 0;
-    for(i = 0; i < t.total_pre; i++)
+    for (i = 0; i < t.total_pre; i++)
         pre_cost += task[t.pre[i]].cost;
     return pre_cost;
 }
@@ -110,11 +111,11 @@ processor_info* initialize_processors_info(void)
 {
     int i;
     processor_info* info = malloc(total_pe * sizeof(processor_info));
-    for(i = 0; i < total_pe; i++)
+    for (i = 0; i < total_pe; i++)
     {
         info[i].processor = pe[i];
         info[i].current_cost = pe[i].task_cost[0];
-        info[i].current_task = 0;
+        info[i].current_task = pe[i].task_no[0];
     }
     return info;
 }
@@ -124,7 +125,7 @@ int decide_processor(const int* task_is_done, const processor_info* processors_i
     int min_cost = processors_info[0].current_cost;
     int min_cost_processor_no = 0;
     int i;
-    for(i = 1; i < total_pe; i++)
+    for (i = 1; i < total_pe; i++)
     {
         if (min_cost > processors_info[i].current_cost)
         {
@@ -138,8 +139,8 @@ int decide_processor(const int* task_is_done, const processor_info* processors_i
 int is_dependency_done(struct _task task_info, const int* task_is_done)
 {
     int i;
-    for(i = 0; i < task_info.total_pre; i++)
-        if(!task_is_done[task_info.pre[i]])
+    for (i = 0; i < task_info.total_pre; i++)
+        if (!task_is_done[task_info.pre[i]])
             return 0;
     return 1;
 }
@@ -147,7 +148,7 @@ int is_dependency_done(struct _task task_info, const int* task_is_done)
 int decide_task(const int* task_is_done, const cp_info* priority_list)
 {
     int i;
-    for(i = 0; i < total_task; i++)
+    for (i = 0; i < total_task; i++)
     {
         int task_index = priority_list[i].number;
         if (!task_is_done[task_index] && is_dependency_done(task[task_index], task_is_done))
@@ -159,26 +160,52 @@ int decide_task(const int* task_is_done, const cp_info* priority_list)
 int get_total_cost(const processor_info* processors_info)
 {
     int i;
-    int total = 0;
-    for(i = 0; i < total_pe; i++)
-        total += processors_info[i].current_cost;
-    return total;
+    int max_cost = processors_info[0].current_cost;
+    for (i = 0; i < total_pe; i++)
+        if (max_cost < processors_info[i].current_cost)
+            max_cost = processors_info[i].current_cost;
+    return max_cost;
 }
 
-void update_info(int task_index, int processor_index, int* task_is_done, processor_info* processors_info)
+void fix_idle_cost(int processor_index,processor_info* processors_info,int current_cost)
+{
+    int i;
+    for(i = 0; i < total_pe; i++)
+    {
+        int last_task_index = processors_info[i].current_task - 1;
+        int last_task_no = pe[i].task_no[last_task_index];
+        if(last_task_no == -1)
+        {
+            int idle_cost = current_cost - processors_info[i].current_cost;
+            processors_info[i].current_cost += idle_cost;
+            pe[i].task_cost[last_task_index] = idle_cost;
+        }
+    }
+}  
+
+
+int update_info(int task_index, int processor_index, int* task_is_done, processor_info* processors_info)
 {
     int processor_current_task = processors_info[processor_index].current_task++;
-    task_is_done[task_index] = 1;
-    pe[processor_index].task_cost[processor_current_task] = task[task_index].cost;
-    pe[processor_index].task_no[processor_current_task] = task[task_index].no;
-    processors_info[processor_index].current_cost += task[task_index].cost;
+    if (task_index == -1)
+    {
+        pe[processor_index].task_no[processor_current_task] = -1;
+    }
+    else
+    {
+        task_is_done[task_index] = 1;
+        pe[processor_index].task_cost[processor_current_task] = task[task_index].cost;
+        pe[processor_index].task_no[processor_current_task] = task[task_index].no;
+        processors_info[processor_index].current_cost += task[task_index].cost;
+    }
+    return processors_info[processor_index].current_cost;
 }
 
 int all_task_done(const int* task_is_done)
 {
     int i;
-    for(i = 0; i < total_task; i++)
-        if(!task_is_done[i])
+    for (i = 0; i < total_task; i++)
+        if (!task_is_done[i])
             return 0;
     return 1;
 }
@@ -189,11 +216,13 @@ void allocate_tasks(void)
     processor_info* processors_info = initialize_processors_info();
     const cp_info* priority_list = get_priority_list();
 
-    while(!all_task_done(task_is_done))
+    while (!all_task_done(task_is_done))
     {
         int processor_index = decide_processor(task_is_done, processors_info);
         int task_index = decide_task(task_is_done, priority_list);
-        update_info(task_index, processor_index, task_is_done, processors_info);
+        int current_cost = update_info(task_index, processor_index, task_is_done, processors_info);
+        if(task_index != -1)
+            fix_idle_cost(processor_index,processors_info,current_cost);
     }
     total_cost = get_total_cost(processors_info);
 
@@ -205,9 +234,9 @@ void allocate_tasks(void)
 void free_resources(void)
 {
     int i;
-    for(i = 0; i < total_task; i++)
+    for (i = 0; i < total_task; i++)
         free(task[i].pre);
-    for(i = 0; i < total_pe; i++)
+    for (i = 0; i < total_pe; i++)
     {
         free(pe[i].task_no);
         free(pe[i].task_cost);
